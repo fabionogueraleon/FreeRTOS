@@ -3,7 +3,7 @@
     	*		    Practica 3 - FreeRTOS		*
 	*							*
 	*		 Carlos Antonio Orrego Muñoz		*
-	* 		    Fabio Noguer León			*
+	* 		    Fabio Noguera León			*
         *                                                       *
     ***************************************************************************/
 
