@@ -1,6 +1,10 @@
 /*  ***************************************************************************
-     *                    Carlos Antonio Orrego Muñoz                        *
-     *                                                                       *
+        *   	Laboratorio de Sistemas ElectrÃ³nicos		*
+    	*		    Practica 3 - FreeRTOS		*
+	*							*
+	*		 Carlos Antonio Orrego MuÃ±oz		*
+	* 		    Fabio Noguer LeÃ³n			*
+        *                                                       *
     ***************************************************************************/
 
 /* Standard includes. */
@@ -18,45 +22,45 @@
 /* Se definen las prioridades */
 #define mainQUEUE_RECEIVE_TASK_PRIORITY		( tskIDLE_PRIORITY + 2 )
 #define	mainQUEUE_SEND_TASK_PRIORITY		( tskIDLE_PRIORITY + 1 )
-#define mainEVENT_SEMAPHORE_TASK_PRIORITY	( configMAX_PRIORITIES - 1 ) /* Máxima prioridad */
+#define mainEVENT_SEMAPHORE_TASK_PRIORITY	( configMAX_PRIORITIES - 1 ) /* MÃ¡xima prioridad */
 
-/* Velocidad (ms) a la que los datos se envían a la cola */
+/* Velocidad (ms) a la que los datos se envÃ­an a la cola */
 #define mainQUEUE_SEND_PERIOD_MS			( 200 / portTICK_RATE_MS )
 
 /* Temporizador software */
 #define mainSOFTWARE_TIMER_PERIOD_MS		( 1000 / portTICK_RATE_MS )
 
-/* Número de elementos que almacenará la cola */
+/* NÃºmero de elementos que almacenarÃ¡ la cola */
 #define mainQUEUE_LENGTH					( 1 )
 
 /*-----------------------------------------------------------*/
 
 /* Funciones para recibir y enviar a la cola */
-static void prvQueueReceiveTask( void *pvParameters ); 	/* Implementación de la función de recepción de mensajes de la cola */
-static void prvQueueSendTaskGreen( void *pvParameters );/* Implementación de la función de envió de mensajes de la cola, Color verde */
-static void prvQueueSendTaskOrange( void *pvParameters );/* Implementación de la función de envió de mensajes de la cola, Color naranja */
-static void prvQueueSendTaskRed( void *pvParameters );/* Implementación de la función de envió de mensajes de la cola, Color rojo */
-static void prvQueueSendTaskBlue( void *pvParameters );/* Implementación de la función de envió de mensajes de la cola, Color azul */
-static void prvQueueSendTaskUSART( void *pvParameters );/* Implementación de la función dpara recibir el mensaje por la UART */
+static void prvQueueReceiveTask( void *pvParameters ); 	/* ImplementaciÃ³n de la funciÃ³n de recepciÃ³n de mensajes de la cola */
+static void prvQueueSendTaskGreen( void *pvParameters );/* ImplementaciÃ³n de la funciÃ³n de enviÃ³ de mensajes de la cola, Color verde */
+static void prvQueueSendTaskOrange( void *pvParameters );/* ImplementaciÃ³n de la funciÃ³n de enviÃ³ de mensajes de la cola, Color naranja */
+static void prvQueueSendTaskRed( void *pvParameters );/* ImplementaciÃ³n de la funciÃ³n de enviÃ³ de mensajes de la cola, Color rojo */
+static void prvQueueSendTaskBlue( void *pvParameters );/* ImplementaciÃ³n de la funciÃ³n de enviÃ³ de mensajes de la cola, Color azul */
+static void prvQueueSendTaskUSART( void *pvParameters );/* ImplementaciÃ³n de la funciÃ³n dpara recibir el mensaje por la UART */
 
-/* Función de devolución del contador software */
+/* FunciÃ³n de devoluciÃ³n del contador software */
 static void vExampleTimerCallback( xTimerHandle xTimer );
 
-/* Función para la administración del semáforo */
+/* FunciÃ³n para la administraciÃ³n del semÃ¡foro */
 static void prvEventSemaphoreTask( void *pvParameters );
 
 /*-----------------------------------------------------------*/
 
-/* Cola para el envió y recepción de datos */
+/* Cola para el enviÃ³ y recepciÃ³n de datos */
 static xQueueHandle xQueue = NULL;
 
-/* Función para el evento y tarea del semáforo */
+/* FunciÃ³n para el evento y tarea del semÃ¡foro */
 static xSemaphoreHandle xEventSemaphore = NULL;
 
 /* Contadores utilizados */
 static volatile uint32_t ulCountOfTimerCallbackExecutions = 0; 	/* Incrementa cada segundo */
-static volatile uint32_t ulCountOfItemsReceivedOnQueue = 0; 	/* Incrementa cada vez que recibe el número 100, como cada 200 ms llega un mensaje el contador incrementa en 5 cada segundo */
-static volatile uint32_t ulCountOfReceivedSemaphores = 0;		/* Cuenta la administración del semaforo cada 500 ms, osea que incrementa en dos cada segundo */
+static volatile uint32_t ulCountOfItemsReceivedOnQueue = 0; 	/* Incrementa cada vez que recibe el nÃºmero 100, como cada 200 ms llega un mensaje el contador incrementa en 5 cada segundo */
+static volatile uint32_t ulCountOfReceivedSemaphores = 0;		/* Cuenta la administraciÃ³n del semaforo cada 500 ms, osea que incrementa en dos cada segundo */
 
 /*-----------------------------------------------------------*/
 /* Funciones para inicializar la placa */
@@ -89,32 +93,32 @@ int main(void)
 
 xTimerHandle xExampleSoftwareTimer = NULL;
 
-	prvSetupHardware();	/* Configuración del sistema */
-	start(); 			/* Función para iniciar el Programa utilizando el pulsador User de la placa*/
+	prvSetupHardware();	/* ConfiguraciÃ³n del sistema */
+	start(); 			/* FunciÃ³n para iniciar el Programa utilizando el pulsador User de la placa*/
 
-	/* Crea la cola para el envió y recepción de datos */
-	xQueue = xQueueCreate( 	mainQUEUE_LENGTH,		/* Número de elementos que la cola puede contener (1) */
-							sizeof( uint32_t ) );	/* Tamaño de cada elemento que contiene la cola */
-	/* Añade el registro, para el beneficio de la depuración del kernel consciente. */
+	/* Crea la cola para el enviÃ³ y recepciÃ³n de datos */
+	xQueue = xQueueCreate( 	mainQUEUE_LENGTH,		/* NÃºmero de elementos que la cola puede contener (1) */
+							sizeof( uint32_t ) );	/* TamaÃ±o de cada elemento que contiene la cola */
+	/* AÃ±ade el registro, para el beneficio de la depuraciÃ³n del kernel consciente. */
 	vQueueAddToRegistry( xQueue, ( signed char * ) "MainQueue" );
 
 
-	/* Crea el semáforo usando la función tick hook */
+	/* Crea el semÃ¡foro usando la funciÃ³n tick hook */
 	vSemaphoreCreateBinary( xEventSemaphore );
-	/* Añade el registro, para el beneficio de la depuración del kernel consciente. */
+	/* AÃ±ade el registro, para el beneficio de la depuraciÃ³n del kernel consciente. */
 	vQueueAddToRegistry( xEventSemaphore, ( signed char * ) "xEventSemaphore" );
 
 
-	/* Crea la cola para la recepción de datos */
-	xTaskCreate( 	prvQueueReceiveTask,			/* Función que implementa la tarea. */
-					( signed char * ) "Rx", 		/* Nombre de texto para la tarea, sólo para ayudar a la depuración */
-					configMINIMAL_STACK_SIZE, 		/* Tamaño (en palabras) de la pila que debe ser creado para la tarea. */
-					NULL, 							/* Parámetro que puede pasar a la tarea */
+	/* Crea la cola para la recepciÃ³n de datos */
+	xTaskCreate( 	prvQueueReceiveTask,			/* FunciÃ³n que implementa la tarea. */
+					( signed char * ) "Rx", 		/* Nombre de texto para la tarea, sÃ³lo para ayudar a la depuraciÃ³n */
+					configMINIMAL_STACK_SIZE, 		/* TamaÃ±o (en palabras) de la pila que debe ser creado para la tarea. */
+					NULL, 							/* ParÃ¡metro que puede pasar a la tarea */
 					mainQUEUE_RECEIVE_TASK_PRIORITY,/* Prioridad asignada a la tarea */
 					NULL );							/* Se utiliza para obtener un identificador de la tarea creada. */
 
 
-	/* Crea la tarea para el envió de datos */
+	/* Crea la tarea para el enviÃ³ de datos */
 	xTaskCreate( 	prvQueueSendTaskGreen,
 						( signed char * ) "TX_Green",
 						configMINIMAL_STACK_SIZE,
@@ -150,7 +154,7 @@ xTimerHandle xExampleSoftwareTimer = NULL;
 						mainQUEUE_SEND_TASK_PRIORITY,
 						NULL );
 
-	/* Crear la tarea que se sincroniza con una interrupción utilizando el semáforo xEventSemaphore */
+	/* Crear la tarea que se sincroniza con una interrupciÃ³n utilizando el semÃ¡foro xEventSemaphore */
 	xTaskCreate( 	prvEventSemaphoreTask,
 						( signed char * ) "Sem",
 						configMINIMAL_STACK_SIZE,
@@ -159,14 +163,14 @@ xTimerHandle xExampleSoftwareTimer = NULL;
 						NULL );
 
 	/* Crea el timer software */
-	xExampleSoftwareTimer = xTimerCreate( 	( const signed char * ) "LEDTimer", /* Nombre de texto para la depuración */
-								mainSOFTWARE_TIMER_PERIOD_MS,		/* Temporizador periódico, en esta caso 1000ms (1s). */
-								pdTRUE,								/* Este es un temporizador periódico, por lo que se establece en xAutoReload pdTRUE */
+	xExampleSoftwareTimer = xTimerCreate( 	( const signed char * ) "LEDTimer", /* Nombre de texto para la depuraciÃ³n */
+								mainSOFTWARE_TIMER_PERIOD_MS,		/* Temporizador periÃ³dico, en esta caso 1000ms (1s). */
+								pdTRUE,								/* Este es un temporizador periÃ³dico, por lo que se establece en xAutoReload pdTRUE */
 								( void * ) 0,						/* El ID no se utiliza, por lo que se puede configurar para cualquier cosa. */
-								vExampleTimerCallback				/* Función de devolución de llamada que cambia el LED apagado. */
+								vExampleTimerCallback				/* FunciÃ³n de devoluciÃ³n de llamada que cambia el LED apagado. */
 							);
 
-	/* Parametros de inicialización del temporizador creado. */
+	/* Parametros de inicializaciÃ³n del temporizador creado. */
 	xTimerStart( xExampleSoftwareTimer, 0 );
 
 	/* Iniciar las tareas y funcionamiento temporizador */
@@ -179,14 +183,14 @@ xTimerHandle xExampleSoftwareTimer = NULL;
 
 static void vExampleTimerCallback( xTimerHandle xTimer )
 {
-	/* Temporizador automático, después de la carga será ejecutado periódicamente */
+	/* Temporizador automÃ¡tico, despuÃ©s de la carga serÃ¡ ejecutado periÃ³dicamente */
 	ulCountOfTimerCallbackExecutions++;
 }
 /*-----------------------------------------------------------*/
 
 static void prvQueueSendTaskGreen ( void *pvParameters )
 {
-const uint32_t ulValueToSend = 0x31; /* 1 - Número a enviar a la cola */
+const uint32_t ulValueToSend = 0x31; /* 1 - NÃºmero a enviar a la cola */
 
 	for( ;; )
 	{
@@ -198,8 +202,8 @@ const uint32_t ulValueToSend = 0x31; /* 1 - Número a enviar a la cola */
 			/* Enviar a la cola */
 			xQueueSend( xQueue, 	/* Cabecera de la cola en la que el elemento debe ser publicado */
 				&ulValueToSend,		/* Puntero sobre el objeto que se va a colocar en la cola.*/
-				0 ); 				/* El 0 indica la cantidad máxima de tiempo que la tarea debe
-				 	 	 	 	 	 * bloquear la espera de espacio que esté disponible en la cola */
+				0 ); 				/* El 0 indica la cantidad mÃ¡xima de tiempo que la tarea debe
+				 	 	 	 	 	 * bloquear la espera de espacio que estÃ© disponible en la cola */
 			}
 	}
 }
@@ -208,7 +212,7 @@ const uint32_t ulValueToSend = 0x31; /* 1 - Número a enviar a la cola */
 
 static void prvQueueSendTaskOrange ( void *pvParameters )
 {
-const uint32_t ulValueToSend = 0x32; /* 2 - Número a enviar a la cola */
+const uint32_t ulValueToSend = 0x32; /* 2 - NÃºmero a enviar a la cola */
 
 	for( ;; )
 	{
@@ -220,8 +224,8 @@ const uint32_t ulValueToSend = 0x32; /* 2 - Número a enviar a la cola */
 			/* Enviar a la cola */
 			xQueueSend( xQueue, 	/* Cabecera de la cola en la que el elemento debe ser publicado */
 				&ulValueToSend,		/* Puntero sobre el objeto que se va a colocar en la cola.*/
-				0 ); 				/* El 0 indica la cantidad máxima de tiempo que la tarea debe
-				 	 	 	 	 	 * bloquear la espera de espacio que esté disponible en la cola */
+				0 ); 				/* El 0 indica la cantidad mÃ¡xima de tiempo que la tarea debe
+				 	 	 	 	 	 * bloquear la espera de espacio que estÃ© disponible en la cola */
 			}
 	}
 }
@@ -229,7 +233,7 @@ const uint32_t ulValueToSend = 0x32; /* 2 - Número a enviar a la cola */
 
 static void prvQueueSendTaskRed ( void *pvParameters )
 {
-const uint32_t ulValueToSend = 0x33; /* 3 - Número a enviar a la cola */
+const uint32_t ulValueToSend = 0x33; /* 3 - NÃºmero a enviar a la cola */
 
 	for( ;; )
 	{
@@ -241,8 +245,8 @@ const uint32_t ulValueToSend = 0x33; /* 3 - Número a enviar a la cola */
 			/* Enviar a la cola */
 			xQueueSend( xQueue, 	/* Cabecera de la cola en la que el elemento debe ser publicado */
 				&ulValueToSend,		/* Puntero sobre el objeto que se va a colocar en la cola.*/
-				0 ); 				/* El 0 indica la cantidad máxima de tiempo que la tarea debe
-				 	 	 	 	 	 * bloquear la espera de espacio que esté disponible en la cola */
+				0 ); 				/* El 0 indica la cantidad mÃ¡xima de tiempo que la tarea debe
+				 	 	 	 	 	 * bloquear la espera de espacio que estÃ© disponible en la cola */
 			}
 	}
 }
@@ -251,7 +255,7 @@ const uint32_t ulValueToSend = 0x33; /* 3 - Número a enviar a la cola */
 
 static void prvQueueSendTaskBlue ( void *pvParameters )
 {
-const uint32_t ulValueToSend = 0x34; /* 4 - Número a enviar a la cola */
+const uint32_t ulValueToSend = 0x34; /* 4 - NÃºmero a enviar a la cola */
 
 	for( ;; )
 	{
@@ -263,8 +267,8 @@ const uint32_t ulValueToSend = 0x34; /* 4 - Número a enviar a la cola */
 			/* Enviar a la cola */
 			xQueueSend( xQueue, 	/* Cabecera de la cola en la que el elemento debe ser publicado */
 				&ulValueToSend,		/* Puntero sobre el objeto que se va a colocar en la cola.*/
-				0 ); 				/* El 0 indica la cantidad máxima de tiempo que la tarea debe
-				 	 	 	 	 	 * bloquear la espera de espacio que esté disponible en la cola */
+				0 ); 				/* El 0 indica la cantidad mÃ¡xima de tiempo que la tarea debe
+				 	 	 	 	 	 * bloquear la espera de espacio que estÃ© disponible en la cola */
 			}
 	}
 }
@@ -284,8 +288,8 @@ static void prvQueueSendTaskUSART ( void *pvParameters )
 			/* Enviar a la cola */
 			xQueueSend( xQueue, 	/* Cabecera de la cola en la que el elemento debe ser publicado */
 				&DataSend,			/* Puntero sobre el objeto que se va a colocar en la cola.*/
-				0 ); 				/* El 0 indica la cantidad máxima de tiempo que la tarea debe
-				 	 	 	 	 	 * bloquear la espera de espacio que esté disponible en la cola */
+				0 ); 				/* El 0 indica la cantidad mÃ¡xima de tiempo que la tarea debe
+				 	 	 	 	 	 * bloquear la espera de espacio que estÃ© disponible en la cola */
 			}
 	}
 }
@@ -345,10 +349,10 @@ static void prvEventSemaphoreTask( void *pvParameters )
 {
 	for( ;; )
 	{
-		/* Solicita el semáforo o bloquear hasta que el semáforo se 'da - given' */
+		/* Solicita el semÃ¡foro o bloquear hasta que el semÃ¡foro se 'da - given' */
 		xSemaphoreTake( xEventSemaphore, portMAX_DELAY );
 
-		/* Cuenta el número de veces que se recibió el semáforo */
+		/* Cuenta el nÃºmero de veces que se recibiÃ³ el semÃ¡foro */
 		ulCountOfReceivedSemaphores++;
 	}
 }
@@ -360,19 +364,19 @@ void vApplicationTickHook( void )
 portBASE_TYPE xHigherPriorityTaskWoken = pdFALSE;
 static uint32_t ulCount = 0;
 
-	/* La función RTOS tick hook es habilitada en setting configUSE_TICK_HOOK colocando
+	/* La funciÃ³n RTOS tick hook es habilitada en setting configUSE_TICK_HOOK colocando
 	1 en FreeRTOSConfig.h.
 
-	"Give" Cede el semáforo cada interrupción de 500 ms */
+	"Give" Cede el semÃ¡foro cada interrupciÃ³n de 500 ms */
 	ulCount++;
 	if( ulCount >= 500UL )
 	{
-		/*  Esta función se llama desde un contexto de interrupción.
-			xHigherPriorityTaskWoken se inicializa a pdFALSE, y se ajustará a
-			pdTRUE por xSemaphoreGiveFromISR () si al dar el semáforo desbloqueó una
-			tarea que tiene prioridad igual o más alta que la tarea interrumpida */
+		/*  Esta funciÃ³n se llama desde un contexto de interrupciÃ³n.
+			xHigherPriorityTaskWoken se inicializa a pdFALSE, y se ajustarÃ¡ a
+			pdTRUE por xSemaphoreGiveFromISR () si al dar el semÃ¡foro desbloqueÃ³ una
+			tarea que tiene prioridad igual o mÃ¡s alta que la tarea interrumpida */
 
-		xSemaphoreGiveFromISR( xEventSemaphore, 		/* Una Cabecera para el semáforo liberado. Este es el identificador devuelto cuando se creó el semáforo.*/
+		xSemaphoreGiveFromISR( xEventSemaphore, 		/* Una Cabecera para el semÃ¡foro liberado. Este es el identificador devuelto cuando se creÃ³ el semÃ¡foro.*/
 						&xHigherPriorityTaskWoken );
 		ulCount = 0UL;
 	}
@@ -384,7 +388,7 @@ void vApplicationMallocFailedHook( void )
 {
 	/* malloc failed hook es habilitado colocando a 1 en configUSE_MALLOC_FAILED_HOOK en FreeRTOSConfig.h.
 
-	Indica que no hay suficiente memoria disponible en la pila,  El tamaño de la pila FreeRTOS es fijado por la
+	Indica que no hay suficiente memoria disponible en la pila,  El tamaÃ±o de la pila FreeRTOS es fijado por la
 	constante configTOTAL_HEAP_SIZE configurable en FreeRTOSConfig.h. */
 
 	for( ;; );
@@ -397,13 +401,13 @@ void vApplicationStackOverflowHook( xTaskHandle pxTask, signed char *pcTaskName 
 	( void ) pcTaskName;
 	( void ) pxTask;
 
-	/* Comprobación de desbordamiento de pila */
+	/* ComprobaciÃ³n de desbordamiento de pila */
 	for( ;; );
 }
 
 /*-----------------------------------------------------------*/
 
-void vApplicationIdleHook( void ) /* Consulta la cantidad de espacio de almacenamiento dinámico libre FreeRTOS */
+void vApplicationIdleHook( void ) /* Consulta la cantidad de espacio de almacenamiento dinÃ¡mico libre FreeRTOS */
 {
 volatile size_t xFreeStackSpace;
 
@@ -412,7 +416,7 @@ volatile size_t xFreeStackSpace;
 
 	if( xFreeStackSpace > 100 )
 	{
-		/* Por ahora, el núcleo ha asignado todo el almacenamiento diamico libre, puede reducirse en
+		/* Por ahora, el nÃºcleo ha asignado todo el almacenamiento diamico libre, puede reducirse en
 		 * configTOTAL_HEAP_SIZE en FreeRTOSConfig.h */
 	}
 }
@@ -434,7 +438,7 @@ static void prvSetupHardware( void )
 {
 
 		  NVIC_SetPriorityGrouping( 0 );							/*Asegura que todos los bits de prioridad son asignados como bits de prioridad como preferencia. */
-		  GPIO_InitTypeDef GPIO_InitStruct;							/* Definición de type */
+		  GPIO_InitTypeDef GPIO_InitStruct;							/* DefiniciÃ³n de type */
 
 		  /* Habilita los perifericos necesarios en el puerto D */
 		  RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOA | RCC_AHB1Periph_GPIOB | RCC_AHB1Periph_GPIOD | RCC_AHB1Periph_GPIOE, ENABLE);
@@ -442,13 +446,13 @@ static void prvSetupHardware( void )
 		  /* Habilita el clock para el USART3 */
 		  RCC_APB1PeriphClockCmd(RCC_APB1Periph_USART3, ENABLE);
 
-		  /*-------------------------- Configuracón GPIOA ----------------------------*/
+		  /*-------------------------- ConfiguracÃ³n GPIOA ----------------------------*/
 		  /* Establece el pin de los pulsadores en el GPIO PA */
 		  GPIO_InitStruct.GPIO_Pin = PUL_START|PUL_1|PUL_2|PUL_3|PUL_4;
 		  GPIO_InitStruct.GPIO_Mode = GPIO_Mode_IN;
 		  GPIO_Init(PORTA, &GPIO_InitStruct);
 
-		  /*-------------------------- Configuracón GPIOB ----------------------------*/
+		  /*-------------------------- ConfiguracÃ³n GPIOB ----------------------------*/
 		  GPIO_InitStruct.GPIO_Pin = USART_TX | USART_RX;
 		  GPIO_InitStruct.GPIO_Mode = GPIO_Mode_AF;
 		  GPIO_InitStruct.GPIO_OType = GPIO_OType_PP;
@@ -483,7 +487,7 @@ static void prvSetupHardware( void )
 
 		  USART_Cmd(USART3, ENABLE);
 
-		  /*-------------------------- Configuracón GPIOD ----------------------------*/
+		  /*-------------------------- ConfiguracÃ³n GPIOD ----------------------------*/
 		  /* Establece el pin los LEDs en el GPIOD */
 		  GPIO_InitStruct.GPIO_Pin = LED_PLA | LED_REDP;
 		  GPIO_InitStruct.GPIO_Mode = GPIO_Mode_OUT;
